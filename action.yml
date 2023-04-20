@@ -1,0 +1,9 @@
+name: 'Automation Create PR To Up/Downstream Branches'
+description: ''
+inputs:
+  GITHUB_TOKEN:
+    description: 'Your Github token'
+    required: true
+runs:
+  using: 'node16'
+  main: 'index.js'
