@@ -29,6 +29,8 @@ function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
 }
 
 function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
+    console.log(github.context.actor);
+    console.log(github.context.payload.pull_request);
     if (prTitle.indexOf(AUTO_PREFIX) === 0) {
         return;
     }
@@ -55,7 +57,13 @@ function autoCreatePR(prTitle, headBranch, downstreamBranch) {
                     head: headBranch,
                     base: downstreamBranch,
                     body: 'Auto created',
-                }).then(() => {
+                }).then((pr) => {
+                    octokit.issues.addLabels({
+                        owner: github.context.repo.owner,
+                        repo: github.context.repo.repo,
+                        issue_number: pr.number,
+                        labels: ['auto', downstreamBranch],
+                    }).then();
                     resolve();
                 }).catch(error => reject(error));
             } else {
