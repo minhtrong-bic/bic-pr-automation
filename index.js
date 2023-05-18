@@ -57,7 +57,8 @@ function autoCreatePR(prTitle, headBranch, downstreamBranch) {
                     head: headBranch,
                     base: downstreamBranch,
                     body: 'Auto created',
-                }).then((pr) => {
+                }).then((response) => {
+                    const pr = response.data;
                     octokit.issues.addLabels({
                         owner: github.context.repo.owner,
                         repo: github.context.repo.repo,
