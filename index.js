@@ -2,7 +2,7 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const { Octokit } = require('@octokit/rest');
 
-const AUTO_PREFIX = '[AUTO]';
+const AUTO_LABEL = 'auto';
 
 const octokit = new Octokit({auth: core.getInput('GITHUB_TOKEN')});
 async function execute()
@@ -29,9 +29,10 @@ function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
 }
 
 function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
-    console.log(github.context.actor);
     console.log(github.context.payload.pull_request);
-    if (prTitle.indexOf(AUTO_PREFIX) === 0) {
+    const labels = github.context.payload.pull_request.labels;
+    if (labels.some(label => label.name === AUTO_LABEL)) {
+        console.log('Do not create PR');
         return;
     }
 
@@ -53,7 +54,7 @@ function autoCreatePR(prTitle, headBranch, downstreamBranch) {
                 octokit.pulls.create({
                     owner: github.context.repo.owner,
                     repo: github.context.repo.repo,
-                    title: '[AUTO] ' + prTitle,
+                    title: prTitle,
                     head: headBranch,
                     base: downstreamBranch,
                     body: 'Auto created',
