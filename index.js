@@ -2,7 +2,14 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const { Octokit } = require('@octokit/rest');
 
-const AUTO_LABEL = 'auto';
+const BRANCH = {
+    MASTER: 'master',
+    RELEASE: 'release',
+    STAGING: 'staging',
+    DEVELOP: 'develop',
+}
+const AUTO_DOWN_LABEL = 'auto-down';
+const AUTO_UP_LABEL = 'auto-up';
 
 const octokit = new Octokit({auth: core.getInput('GITHUB_TOKEN')});
 async function execute()
@@ -21,31 +28,30 @@ async function execute()
 }
 
 function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
-    if (targetBranch === 'master' || targetBranch.indexOf('release') !== -1) {
-        return autoCreatePR(prTitle, headBranch, 'staging');
-    } else if (targetBranch === 'staging') {
-        return autoCreatePR(prTitle, headBranch, 'develop');
+    if (targetBranch === BRANCH.MASTER || targetBranch.indexOf(BRANCH.RELEASE) !== -1) {
+        return autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_DOWN_LABEL);
+    } else if (targetBranch === BRANCH.STAGING) {
+        return autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_UP_LABEL);
     }
 }
 
 function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
-    console.log(github.context.payload.pull_request);
     const labels = github.context.payload.pull_request.labels;
-    if (labels.some(label => label.name === AUTO_LABEL)) {
+    if (labels.some(label => label.name === AUTO_DOWN_LABEL)) {
         console.log('Do not create PR');
         return;
     }
 
-    if (targetBranch === 'develop') {
+    if (targetBranch === BRANCH.DEVELOP) {
         return autoCreatePR(prTitle, headBranch, 'staging');
     }
 }
-function autoCreatePR(prTitle, headBranch, downstreamBranch) {
+function autoCreatePR(prTitle, headBranch, baseBranch, autoLabel) {
     return new Promise((resolve, reject) => {
         octokit.repos.compareCommits({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
-            base: downstreamBranch,
+            base: baseBranch,
             head: headBranch,
         }).then(comparison => {
             if (comparison.data.files.length > 0) {
@@ -56,7 +62,7 @@ function autoCreatePR(prTitle, headBranch, downstreamBranch) {
                     repo: github.context.repo.repo,
                     title: prTitle,
                     head: headBranch,
-                    base: downstreamBranch,
+                    base: baseBranch,
                     body: 'Auto created',
                 }).then((response) => {
                     const pr = response.data;
@@ -64,7 +70,7 @@ function autoCreatePR(prTitle, headBranch, downstreamBranch) {
                         owner: github.context.repo.owner,
                         repo: github.context.repo.repo,
                         issue_number: pr.number,
-                        labels: ['auto', downstreamBranch],
+                        labels: [autoLabel, baseBranch],
                     }).then();
                     resolve();
                 }).catch(error => reject(error));
