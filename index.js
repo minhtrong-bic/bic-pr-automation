@@ -31,7 +31,7 @@ function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
     if (targetBranch === BRANCH.MASTER || targetBranch.indexOf(BRANCH.RELEASE) !== -1) {
         return autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_DOWN_LABEL);
     } else if (targetBranch === BRANCH.STAGING) {
-        return autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_UP_LABEL);
+        return autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_DOWN_LABEL);
     }
 }
 
@@ -43,7 +43,7 @@ function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
     }
 
     if (targetBranch === BRANCH.DEVELOP) {
-        return autoCreatePR(prTitle, headBranch, 'staging');
+        return autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_UP_LABEL);
     }
 }
 function autoCreatePR(prTitle, headBranch, baseBranch, autoLabel) {
