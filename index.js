@@ -27,12 +27,27 @@ async function execute()
     }
 }
 
-function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
+async function autoCreatePRsToDownStreamBranches(prTitle, headBranch, targetBranch) {
+    let prNumber1;
+    let prNumber2;
     if (targetBranch === BRANCH.MASTER || targetBranch.indexOf(BRANCH.RELEASE) !== -1) {
-        return autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_DOWN_LABEL);
+        console.log('Create downstream PR to staging & develop');
+        prNumber1 = await autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_DOWN_LABEL);
+        prNumber2 = await autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_DOWN_LABEL);
     } else if (targetBranch === BRANCH.STAGING) {
-        return autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_DOWN_LABEL);
+        console.log('Create downstream PR to develop');
+        prNumber1 = await autoCreatePR(prTitle, headBranch, BRANCH.DEVELOP, AUTO_DOWN_LABEL);
     }
+
+    //auto merge downstream PR
+    if (prNumber1) {
+        await autoMergePR(prNumber1);
+    }
+    if (prNumber2) {
+        await autoMergePR(prNumber2);
+    }
+
+    return;
 }
 
 function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
@@ -43,6 +58,7 @@ function autoCreatePRsToUpStreamBranches(prTitle, headBranch, targetBranch) {
     }
 
     if (targetBranch === BRANCH.DEVELOP) {
+        console.log('Create upstream PR to staging');
         return autoCreatePR(prTitle, headBranch, BRANCH.STAGING, AUTO_UP_LABEL);
     }
 }
@@ -72,14 +88,32 @@ function autoCreatePR(prTitle, headBranch, baseBranch, autoLabel) {
                         issue_number: pr.number,
                         labels: [autoLabel, baseBranch],
                     }).then();
-                    resolve();
+                    console.log(`PR #${pr.number} is created`);
+                    resolve(pr.number);
                 }).catch(error => reject(error));
             } else {
-                resolve();
+                console.log('Nothing changed.')
+                resolve(null);
             }
         }).catch(error => reject(error));
     });
+}
 
+function autoMergePR(prNumber) {
+    return new Promise((resolve, reject) => {
+        octokit.pulls.merge({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: prNumber,
+            merge: 'merge'
+        }).then(response => {
+            console.log(`PR #${prNumber} is merged`)
+            resolve();
+        }).catch(error => {
+           console.log(error);
+           resolve();
+        });
+    });
 }
 
 execute().then();
